@@ -1,5 +1,7 @@
 Olafur Gudmundsson olafur@cloudflare.com 2014/12/01 
+
 Updated 2015/02/16 with better instructions. 
+
 Updated 2015/02/17 with a timeout. (Warren Kumari warren@kumari.net)
 
 A simple program to check which DNSSEC algorithms a particular resolver
@@ -13,12 +15,12 @@ This program requires the package miekg/dns which can be added by issuing
 
      "go get github.com/miekg/dns"
 
-__Usage:  
+######Usage:
 By default this program has an aggressive timeout (5s) to ensure it runs quickly. 
 If you get lots of timeouts try rerunning it with a longer timeout.
 
 Command line arguments: ./alg_rep: [-r resolver] [-d] [-v] 
-
+```
   -d=false: All debug on
 
   -r="8.8.8.8": address host or host:port of DNS resolver
@@ -28,11 +30,30 @@ Command line arguments: ./alg_rep: [-r resolver] [-d] [-v]
   -v=false: Short output
 
   -r selects the resolver to check, 
-
+```
   Setting the -d option will give lots more output 
 
-  -d should only be used when checking strange results as the output is excessive and 
+  `-d` should only be used when checking strange results as the output is excessive and 
      only for experts to interpret. 
 
 
+######Example output:
+```
+Zone dnssec-test.org.  Qtype DNSKEY Resolver 8.8.8.8 debug=false verbose=false Prime= V
+DS     :  1  2  3  4  |  1  2  3  4
+ALGS   :    NSEC      |     NSEC3
+alg-1  :  S  S  S  S  |  x  x  x  x  => RSAMD5
+alg-3  :  -  -  -  -  |  x  x  x  x  => DSA
+alg-5  :  V  V  -  V  |  x  x  x  x  => RSASHA1
+alg-6  :  x  x  x  x  |  -  -  -  -  => DSA-NSEC3-SHA1
+alg-7  :  x  x  x  x  |  V  V  -  V  => RSASHA1-NSEC3
+alg-8  :  V  V  -  V  |  V  V  -  V  => RSASHA-256
+alg-10 :  V  V  -  V  |  V  V  -  V  => RSASHA-512
+alg-12 :  -  -  -  -  |  -  -  -  -  => ECC-GOST
+alg-13 :  V  V  -  V  |  V  V  -  V  => ECSDAP256-SHA256
+alg-14 :  V  V  -  V  |  V  V  -  V  => ECSDAP384-SHA384
+V == Validates  - == Answer  x == Alg Not specified
+T == Timeout S == ServFail O == Other Error
+DS algs 1=SHA1 2=SHA2-256 3=GOST 4=SHA2-384
+```
 
