@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/miekg/dns"
 	"os"
+        "time"
 )
 
 // change the array sizes below when new algorithms are added
@@ -50,12 +51,12 @@ var debug bool = false
 var maxRetry = 1
 
 // Work sets up one go-routine for each Digest algorithm
-func work(d int, myType uint16, resolver string, verb bool, done chan bool) {
+func work(d int, myType uint16, resolver string, verb bool, done chan bool, timeout *int) {
 	// Scan the digest algorithms for both NSEC and NSEC3 zones
 	for a := range algs {
 		name := ds[d] + "." + algs[a] + "-nsec"
-		result[a][d] = supports(name+"."+zone, myType, resolver, verb)
-		result[a][d+maxDs] = supports(name+"3."+zone, myType, resolver, verb)
+		result[a][d] = supports(name+"."+zone, myType, resolver, verb, timeout)
+		result[a][d+maxDs] = supports(name+"3."+zone, myType, resolver, verb, timeout)
 	}
 	done <- true // report completion
 }
@@ -69,6 +70,7 @@ func main() {
 	resolver := flag.String("r", "8.8.8.8", "address host or host:port of DNS resolver")
 	deb := flag.Bool("d", false, "All debug on")
 	verbose := flag.Bool("v", false, "Short output")
+        timeout := flag.Int("t", 5, "Timeout in seconds - defaults to 5")
 	flag.Parse()
 	// Extract supplied parameters
 	myType := uint16(48) // DNSKEY (as single key signed zone this is suffiicent test
@@ -77,7 +79,7 @@ func main() {
 
 	// first do a priming query to get dnssec-test.org into cache and check if
 	// resolver valiates ==> no need to continue if resolver is not validating
-	prime := supports(zone, myType, myRes, true)
+	prime := supports(zone, myType, myRes, true, timeout)
 	if prime == " T " {
 		fmt.Printf("Not a resolver ???  %s\n", myRes)
 		os.Exit(1)
@@ -91,7 +93,7 @@ func main() {
 		alive := 0 // how many routines are still running
 		// ask for DS-x in parallel
 		for i := range ds {
-			go work(i, myType, myRes, debug, done)
+			go work(i, myType, myRes, debug, done, timeout)
 			alive++
 		}
 		for alive > 0 { // wait for lookups to finish
@@ -116,8 +118,8 @@ func list_supp(supp [maxDs + maxDs]string) (out string) {
 	return out
 }
 
-func supports(name string, myType uint16, resolver string, verb bool) string {
-	supp, msg := validate_name(name, myType, resolver, debug)
+func supports(name string, myType uint16, resolver string, verb bool, timeout *int) string {
+	supp, msg := validate_name(name, myType, resolver, debug, timeout)
 	if debug || verb {
 		fmt.Printf("%s\n", msg)
 	}
@@ -156,13 +158,13 @@ func PrintSection(prefix string, z []dns.RR, display bool) {
 // function to perform the lookup and retries
 // returns the message and a flag if there was a timeout
 //
-func doLookup(qn string, qt uint16, resolver string) (*dns.Msg, bool) {
+func doLookup(qn string, qt uint16, resolver string, timeout *int) (*dns.Msg, bool) {
 	var err error
 	c := dns.Client{}
+        c.ReadTimeout = time.Duration(*timeout) * time.Second
 	m := &dns.Msg{}
 	m.SetEdns0(2048, true) // asking for DO bit  // create a fallback XXX
 	m.SetQuestion(qn, qt)
-	// need to set a longer timerout
 
 	for i := 0; i <= maxRetry; i++ {
 		msg, _, err := c.Exchange(m, resolver+":53")
@@ -178,11 +180,11 @@ func doLookup(qn string, qt uint16, resolver string) (*dns.Msg, bool) {
  * A function to ask a question and returns if the answer existed and if it was validated
  * Input is the name and query type, what resolver to use and if debugging is turned on
  */
-func validate_name(qn string, qt uint16, resolver string, debug bool) (supp string,
+func validate_name(qn string, qt uint16, resolver string, debug bool, timeout *int) (supp string,
 	msg string) {
 
-	name, timeout := doLookup(qn, qt, resolver)
-	if timeout {
+	name, timedout := doLookup(qn, qt, resolver, timeout)
+	if timedout {
 		return " T ", "Lookup Error"
 	}
 	supp = " - "
