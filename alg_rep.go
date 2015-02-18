@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/miekg/dns"
+	"time"
 	"os"
 )
 
@@ -32,6 +33,7 @@ import (
 
 const maxAlg = 10
 const maxDs = 4
+const zone string = "dnssec-test.org."     // Our test zone anchors
 
 var algs = [maxAlg]string{"alg-1", "alg-3", "alg-5", "alg-6", "alg-7", "alg-8",
 	"alg-10", "alg-12", "alg-13", "alg-14"}
@@ -43,11 +45,11 @@ var names = [maxAlg]string{"RSAMD5", "DSA", "RSASHA1", "DSA-NSEC3-SHA1",
 var ds = [maxDs]string{"ds-1", "ds-2", "ds-3", "ds-4"}
 
 var number = [10]string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
-
 var result [maxAlg][maxDs + maxDs]string // Results are stored in here
-var zone string = "dnssec-test.org."     // Our test zone anchors
+
+// Operating controls 
 var debug bool = false
-var maxRetry = 1
+var maxRetry int = 3
 
 // Work sets up one go-routine for each Digest algorithm
 func work(d int, myType uint16, resolver string, verb bool, done chan bool) {
@@ -69,11 +71,13 @@ func main() {
 	resolver := flag.String("r", "8.8.8.8", "address host or host:port of DNS resolver")
 	deb := flag.Bool("d", false, "All debug on")
 	verbose := flag.Bool("v", false, "Short output")
+	retry := flag.Int("t", 3, "How many times to retry each query")
 	flag.Parse()
 	// Extract supplied parameters
 	myType := uint16(48) // DNSKEY (as single key signed zone this is suffiicent test
 	debug = *deb
 	myRes := *resolver
+	maxRetry = *retry
 
 	// first do a priming query to get dnssec-test.org into cache and check if
 	// resolver valiates ==> no need to continue if resolver is not validating
@@ -157,8 +161,9 @@ func PrintSection(prefix string, z []dns.RR, display bool) {
 // returns the message and a flag if there was a timeout
 //
 func doLookup(qn string, qt uint16, resolver string) (*dns.Msg, bool) {
-	var err error
+	var myerr error
 	c := dns.Client{}
+	c.ReadTimeout = time.Duration(1) * time.Second
 	m := &dns.Msg{}
 	m.SetEdns0(2048, true) // asking for DO bit  // create a fallback XXX
 	m.SetQuestion(qn, qt)
@@ -169,8 +174,9 @@ func doLookup(qn string, qt uint16, resolver string) (*dns.Msg, bool) {
 		if err == nil {
 			return msg, false
 		}
+		myerr = err
 	}
-	fmt.Printf("Lookup Error %s %v\n", qn, err)
+	fmt.Printf("Lookup Error %d %s %v\n", qn, myerr)
 	return nil, true
 }
 
