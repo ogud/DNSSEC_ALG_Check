@@ -15,6 +15,9 @@ This program requires the package miekg/dns which can be added by issuing
 
      "go get github.com/miekg/dns"
 
+and build the program by issuing 
+     "go build alg_rep.go" 
+
 By default this program has an aggressive timeout (5s) to ensure it runs quickly. 
 If you get lots of timeouts try rerunning it with a longer timeout.
 
@@ -24,20 +27,20 @@ Command line arguments: ./alg_rep: [-r resolver] [-d] [-v]
 
   -r="8.8.8.8": address host or host:port of DNS resolver
 
-  -t=3: Retries. The program has 1 second query timeout this tells how often to retry
-
   -v=false: Short output
 
   -r selects the resolver to check, 
-```
+
   Setting the -d option will give lots more output 
 
   `-d` should only be used when checking strange results as the output is excessive and 
      only for experts to interpret. 
 
+Note: the program has short timeouts due to the large number of queries asked
+If there are many timeout's re-running the program will most of the time get answers without timeouts. 
 
 Sample output: ./alg_rep -r 8.8.4.4  
-```
+
 Zone dnssec-test.org.  Qtype DNSKEY Resolver 8.8.8.8 debug=false verbose=false Prime= V
 DS     :  1  2  3  4  |  1  2  3  4
 ALGS   :    NSEC      |     NSEC3
