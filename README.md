@@ -1,46 +1,47 @@
 Olafur Gudmundsson olafur@cloudflare.com 2014/12/01 
 
-Updated 2015/02/16 with better instructions. 
-
 Updated 2015/02/17 with better timeout and retry selector. (Warren Kumari warren@kumari.net)
+Updated 2015/04/01 with better instructions. 
 
 A simple program to check which DNSSEC algorithms a particular resolver
 validates. 
-This program is written in Go and it is the first program I wrote, it
-uses go routines to perform the checks in parallel. 
+This program is written in Go and it is the first real program I wrote using go routines. 
+It uses the go routines to perform the checks in parallel. 
 Some resolvers return lots of timeouts when this program runs against
-them, just rerun the program with a longer timeout. 
+them, just wait few seconds and then rerun the program for better results. 
+
+Note: IF this is the FIRST time you use the go language you need to 
+  a) download and install go first here for instructions https://golang.org/doc/install
+  b) need to set a GOPATH variable in your environment, see https://golang.org/doc/code.html#GOPATH
 
 This program requires the package miekg/dns which can be added by issuing 
 
      "go get github.com/miekg/dns"
 
-and build the program by issuing 
+and build the program by issuing
      "go build alg_rep.go" 
 
-By default this program has an aggressive timeout (5s) to ensure it runs quickly. 
-If you get lots of timeouts try rerunning it with a longer timeout.
+By this program has an aggressive timeout (.5s) to ensure it runs quickly. 
 
 Command line arguments: ./alg_rep: [-r resolver] [-d] [-v] 
 ```
   -d=false: All debug on
 
-  -r="8.8.8.8": address host or host:port of DNS resolver
+  -r="8.8.8.8": address host or host:port of the DNS resolver to use 
 
   -v=false: Short output
-
-  -r selects the resolver to check, 
 
   Setting the -d option will give lots more output 
 
   `-d` should only be used when checking strange results as the output is excessive and 
      only for experts to interpret. 
+```
 
 Note: the program has short timeouts due to the large number of queries asked
 If there are many timeout's re-running the program will most of the time get answers without timeouts. 
 
 Sample output: ./alg_rep -r 8.8.4.4  
-
+```
 Zone dnssec-test.org.  Qtype DNSKEY Resolver 8.8.8.8 debug=false verbose=false Prime= V
 DS     :  1  2  3  4  |  1  2  3  4
 ALGS   :    NSEC      |     NSEC3
