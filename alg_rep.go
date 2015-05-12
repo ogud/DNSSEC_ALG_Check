@@ -34,6 +34,10 @@ const maxAlg = 10
 const maxDs = 4
 var algs = [maxAlg] string { "alg-1", "alg-3", "alg-5", "alg-6", "alg-7", "alg-8", 
 	"alg-10", "alg-12", "alg-13", "alg-14" }
+var names = [maxAlg] string {"RSA-MD5 OBSOLETE", "DSA/SHA1", "RSA/SHA1", "RSA-NSEC3-SHA1",
+	"DSA-NSEC3-SHA1", "RSA-SHA256", "RSA-SHA512", "GOST-ECC", "ECDSAP256SHA256", 
+	"ECDSAP384SHA384"}
+
 // List the define DS digiest alogrithms As of 2014/11
 var ds = [maxDs]string{"ds-1", "ds-2", "ds-3", "ds-4"}
 
@@ -128,7 +132,7 @@ func print_table() {
 		if len(msg) < 6 {
 			msg += " "
 		}
-		fmt.Printf("%s\n", msg + " : " + list_supp(result[a]))
+		fmt.Printf("%s\n", msg + " : " + list_supp(result[a]) + " => " + names[a])
 	}
 	fmt.Printf( "V == Validates  - == Answer  x == Alg Not specified\n" + 
 		   "T == Timeout S == ServFail O == Other Error\n" + 
