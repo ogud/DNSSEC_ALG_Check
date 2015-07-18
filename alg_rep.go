@@ -44,7 +44,7 @@ var ds = [maxDs]string{"ds-1", "ds-2", "ds-3", "ds-4"}
 var number = [10] string { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" }
 
 var result[maxAlg][maxDs + maxDs ] string // Results are stored in here 
-var zone string = "dnssec-test.org."  // Our test zone anchors
+var zone string = ""  // Our test zone anchors
 var debug bool = false
 
 // Work sets up one go-routine for each Digest algorithm 
@@ -67,6 +67,7 @@ func work( d int, myType uint16, resolver string, verb bool, done chan bool) {
 func main() {
 	// Get commandline arguments
 	resolver := flag.String("r", "8.8.8.8", "address host or host:port of DNS resolver")
+    myZone := flag.String("z", "dnssec-test.org.", "Domain to use for checking")
 	deb := flag.Bool("d", false, "All debug on")
 	verbose := flag.Bool("v", false, "Short output")
 	flag.Parse()
@@ -74,6 +75,7 @@ func main() {
 	myType := uint16(48)  // DNSKEY GetType(qtype)
 	debug = *deb
 	myRes := *resolver
+    zone := *myZone
 	if (myRes[0:1] != "[") {
 		myRes = "[" + myRes + "]"
 	}
@@ -177,7 +179,7 @@ func doLookup( qn string, qt uint16, resolver string)  (*dns.Msg, bool) {
 func validate_name( qn string, qt uint16, resolver string, debug bool) (supp string, msg string){
 	name, timeout := doLookup(qn, qt, resolver) 
 	if (timeout)  {
-		return " T ", "Lookup Errorr"
+		return " T ", "Lookup Error"
 	}
 	supp = " - "
 	counts := number[len(name.Answer)] + " " + number[len(name.Ns)] + " " + number[len(name.Extra)]
