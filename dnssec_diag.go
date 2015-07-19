@@ -1,19 +1,24 @@
 /*
  * A program to examine the support for DNSSEC algorithms in resolvers
  *
- * Olafur Gudmundsson CloudFlare Olafur@cloudflare.com    2014/Nov
+ * Olafur Gudmundsson CloudFlare Olafur@cloudflare.com    2015/Jul
  *
- * Usage ./alg_rep [-r resolver] [-v] [-d]
- *                  -v verbose
- *                  -d debug
+ * Usage ./dnssec_diag.go
+ *                  -r resolver to use [8.8.8.8 default]
+ *                  -v verbose [false]
  */
-/* Output codes
- *     V  answer verified ==? algorithm supported
- *     -  unverified answer
- *     x  Unspecified algorithm/digest/negative answer combination
- *     T  Timeout
- *     S  ServFail
- *     O  Other
+/*
+ * This program attempts "rough" classificaion of DNS resovlvers from a DNSSEC persective
+ * The idea is to be able to quickly figure out if the resolver is "truthful" and/or "useful"
+ * The criterias are: Does the resovler support algorithms 8 and 13 ==>
+ *   8 Implies support for NSEC3 i.e. this is modern resolver
+ *   13 Is to see how uptodate it is of supporting algorithm that was specified in 2012
+ *   Then the validator is checked for handling of
+ *       - Badly signed answer
+ *       - Non existant answer
+ *   All queries are sent with ENDS0 thus resolvers that do not support ENDS0 fail
+ *   For each one of our queries the resolver can get 2 points
+ *    One for answering with right data and the second one for setting AD bit correctly
  */
 package main
 
@@ -28,15 +33,9 @@ const maxQ = 4
 
 var questions = [maxQ]string{"realy-doesnotexist.dnssec-test.org. A", "alg-8-nsec3.dnssec-test.org. SOA", "alg-13-nsec.dnssec-test.org. SOA", "dnssec-failed.org. SOA"}
 
-// List the define DS digiest alogrithms As of 2014/11
-var zone string = "dnssec-test.org." // Our test zone anchors
 var debug bool = false
 var number = [10]string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
 
-/* This program uses go routines to speed up lookups
- *  we do 80 lookups alg(10) * ds(4) * Nsec-types(2)
- * The program accepts inputs
- */
 func main() {
 	// Get commandline arguments
 	resolver := flag.String("r", "8.8.8.8", "address host or host:port of DNS resolver")
@@ -46,6 +45,7 @@ func main() {
 	flag.Parse()
 	// Extract supplied parameters
 	//	debug = *deb
+
 	myRes := *resolver
 	if myRes[0:1] != "[" {
 		myRes = "[" + myRes + "]"
@@ -54,12 +54,18 @@ func main() {
 	fmt.Println("Grade: ", grade)
 }
 
+/*
+ * grade_resolver () will ask the predefined questions and return the grade
+ */
+
 func grade_resolver(myRes string, verbose bool) int {
 	grade := 0
 	// this also does priming query to get dnssec-test.org into cache and check if
 	// resolver valiates (no need to query if not validating)
 	fmt.Printf("Grading Resolver %s\n", myRes)
+
 	alg8, a8a := ask(questions[1], myRes, verbose)
+
 	if alg8 == " A " {
 		grade++
 		if a8a {
