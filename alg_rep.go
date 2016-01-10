@@ -32,6 +32,10 @@ const maxDs = 4
 
 var algs = [maxAlg]string{"alg-1", "alg-3", "alg-5", "alg-6", "alg-7", "alg-8",
 	"alg-10", "alg-12", "alg-13", "alg-14"}
+var names = [maxAlg] string {"RSA-MD5 OBSOLETE", "DSA/SHA1", "RSA/SHA1",
+	"DSA-NSEC3-SHA1", "RSA-NSEC3-SHA1", "RSA-SHA256", "RSA-SHA512",
+	"GOST-ECC", "ECDSAP256SHA256", "ECDSAP384SHA384"}
+
 
 // List the define DS digiest alogrithms As of 2014/11
 var ds = [maxDs]string{"ds-1", "ds-2", "ds-3", "ds-4"}
@@ -60,14 +64,16 @@ func work(d int, myType uint16, resolver string, verb bool, done chan bool) {
  */
 func main() {
 	// Get commandline arguments
-	resolver := flag.String("r", "8.8.8.8", "address host or host:port of DNS resolver")
+	resolver := flag.String("r", "8.8.8.8", "Address host or host:port of DNS resolver")
 	deb := flag.Bool("d", false, "All debug on")
 	verbose := flag.Bool("v", false, "Short output")
+	myZone := flag.String("z", "dnssec-test.org.", "Domain to use for checking")
 	flag.Parse()
 	// Extract supplied parameters
 	myType := uint16(48) // DNSKEY GetType(qtype)
 	debug = *deb
 	myRes := *resolver
+	zone := *myZone
 	if myRes[0:1] != "[" {
 		myRes = "[" + myRes + "]"
 	}
@@ -125,7 +131,8 @@ func print_table() {
 		if len(msg) < 6 {
 			msg += " "
 		}
-		fmt.Printf("%s\n", msg+" : "+list_supp(result[a]))
+		fmt.Printf("%s\n", msg+" : "+list_supp(result[a])+" => "+
+			names[a])
 	}
 	fmt.Printf("V == Validates  - == Answer  x == Alg Not specified\n" +
 		"T == Timeout S == ServFail O == Other Error\n" +
@@ -169,7 +176,7 @@ func doLookup(qn string, qt uint16, resolver string) (*dns.Msg, bool) {
 func validate_name(qn string, qt uint16, resolver string, debug bool) (supp string, msg string) {
 	name, timeout := doLookup(qn, qt, resolver)
 	if timeout {
-		return " T ", "Lookup Errorr"
+		return " T ", "Lookup Error"
 	}
 	supp = " - "
 	counts := number[len(name.Answer)] + " " + number[len(name.Ns)] + " " + number[len(name.Extra)]
